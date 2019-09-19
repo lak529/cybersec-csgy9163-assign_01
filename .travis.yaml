@@ -1,0 +1,3 @@
+langauge: c
+compiler:
+ - gcc
