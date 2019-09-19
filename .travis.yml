@@ -1,4 +1,6 @@
 langauge: c
+
 compiler: gcc
+
 script: make
 
