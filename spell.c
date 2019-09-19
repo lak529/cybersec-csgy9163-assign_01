@@ -14,6 +14,58 @@
 #define MAXWORDCHECK (LENGTH*2)
 #define MAXLINE 65535
 
+
+int strip_punks(const char srcword[], char destword[])
+{
+    int ret = 0;
+    int ps = 0;
+    int pe = 0;
+    char c;
+    int i;
+    
+    const char* PUNCS = "`~!@#$%^&*()_-+=[]\\|}{'\";:,./?><";
+    const int PUNCSNUM = 32;
+
+    memset(destword, 0, LENGTH+1);
+    pe = strnlen(srcword,MAXWORDCHECK)-1;
+
+    //strip pre punc
+    while(ps<=pe)
+    {
+        c=srcword[ps];
+        if(c=='\0') { break; } //break out, we're at the end of the valid string
+        for(i=0; i<PUNCSNUM; i++)
+        {
+            if(c==PUNCS[i]) { ps++; c=0; break; }
+        }
+        if(c!=0) break; //break out, we have a letter
+    }
+
+    //strip post apoc punk
+    while(pe>=ps)
+    {
+        c=srcword[pe];
+        if(c=='\0') { pe--; continue; }
+        for(i=0; i<PUNCSNUM; i++)
+        {
+            if(c==PUNCS[i]) { pe--; c=0; break; }
+        }
+        if(c!=0) break; //break out, we have a letter
+    }
+
+    //invalid word
+    if(ps>pe){ret=0; goto EXIT_RET;}
+    //word too long for output buffer
+    if(pe-ps+1 > LENGTH) {ret=-1; goto EXIT_RET; }
+
+    //copy the word over, so we can work on it
+    memcpy(destword, srcword+ps, pe-ps+1);
+    ret = pe-ps+1;
+
+EXIT_RET:
+    return ret;
+}
+
 int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
 {
     int ret = 0;
@@ -25,6 +77,7 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
     char* word;
     int eol = 0;
     int index = 0;
+    char tword[MAXWORDCHECK+1];
 
     errcount = 0;
     while(!feof(fp))
@@ -57,10 +110,17 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
             while(we<linelen && line[we]!='\0') we++;
 
             if(ws>=linelen) break;  //no more words on this line
-            word = (char*)malloc(MAXWORDCHECK+1);
-            memset(word, 0, MAXWORDCHECK+1);
-            memcpy(word, line+ws, we-ws+1);
-
+            memset(tword, 0, MAXWORDCHECK+1);
+            memcpy(tword, line+ws, we-ws+1);
+            
+            word = (char*)malloc(LENGTH+1);
+            //if we get back 0, the word doens't have anything but punks
+            //  this also clears tword, so we don't need to init it
+            //Note, we're stripping the punks BEFORE checking, AND while chekcing,
+            //  because the spec defines that check_word() must, but the TEST sample
+            //  requires the punks to be stripped from the mspell results
+            if(strip_punks(tword, word)==0) {ret=0; goto EXIT_RET;}
+            
             //check the word
             //NOTE:  standalone punks will be flagged as 'misspellings'
             //  And this is why you should NEVER return bool as an error code.
@@ -99,51 +159,24 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
 EXIT_RET:
     return ret;
 }
+
+#ifdef _WIN32
 int check_word(const char* word, hashmap_t hashtable[])
+#else
+bool check_word(const char* word, hashmap_t hashtable[])
+#endif
 {
     int ret = 0;
     int ps = 0;
     int pe = 0;
     char c;
     int hashloc = 0;
-    const char* PUNCS = "`~!@#$%^&*()_-+=[]\\|}{'\";:,./?><";
-    const int PUNCSNUM = 32;
     int i;
     char tword[LENGTH+1];
     hashmap_t tnode;
 
-    memset(tword, 0, LENGTH+1);
-    pe = strnlen(word,MAXWORDCHECK)-1;
-
-    //strip pre punc
-    while(ps<=pe)
-    {
-        c=word[ps];
-        if(c=='\0') { break; } //break out, we're at the end of the valid string
-        for(i=0; i<PUNCSNUM; i++)
-        {
-            if(c==PUNCS[i]) { ps++; c=0; break; }
-        }
-        if(c!=0) break; //break out, we have a letter
-    }
-
-    //strip post apoc punk
-    while(pe>=ps)
-    {
-        c=word[pe];
-        if(c=='\0') { pe--; continue; }
-        for(i=0; i<PUNCSNUM; i++)
-        {
-            if(c==PUNCS[i]) { pe--; c=0; break; }
-        }
-        if(c!=0) break; //break out, we have a letter
-    }
-
-    //invalid word
-    if(ps>pe){ret=0; goto EXIT_RET;}
-
-    //copy the word over, so we can work on it
-    memcpy(tword, word+ps, pe-ps+1);
+    //if we get back 0, the word doens't have anything but punks
+    if(strip_punks(word, tword)==0) {ret=0; goto EXIT_RET;}
 
     hashloc = hash_function(tword);
     tnode = hashtable[hashloc];
@@ -176,7 +209,11 @@ EXIT_RET:
 
 
 //note, this is assuming that a dictionary that contains no good words, but that still loads, is a "successful" load
+#ifdef _WIN32
 int load_dictionary(const char* dictionary_file, hashmap_t hashtable[])
+#else
+bool load_dictionary(const char* dictionary_file, hashmap_t hashtable[])
+#endif
 {
     int ret = 0;
     int count;

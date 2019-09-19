@@ -9,7 +9,9 @@
 #ifndef DICTIONARY_H
 #define DICTIONARY_H
 
-//#include <stdbool.h>
+#ifndef _WIN32
+#include <stdbool.h>
+#endif
 #include <stdio.h>
 
 // maximum length for a word
