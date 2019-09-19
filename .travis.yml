@@ -2,5 +2,5 @@ langauge: c
 
 compiler: gcc
 
-script: make test
+script: make
 
