@@ -37,4 +37,14 @@ typedef node* hashmap_t;
  **/
 int hash_function(const char* word);
 
+#ifdef _WIN32
+int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[]);
+int load_dictionary(const char* dictionary_file, hashmap_t hashtable[]);
+int check_word(const char* word, hashmap_t hashtable[]);
+#else
+int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[]);
+bool load_dictionary(const char* dictionary_file, hashmap_t hashtable[]);
+bool check_word(const char* word, hashmap_t hashtable[]);
+#endif
+
 #endif // DICTIONARY_H

@@ -6,13 +6,13 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "spell.h"
+#include "dictionary.h"
 
 
 
 //max size, including puncs, for a word token to check
 #define MAXWORDCHECK (LENGTH*2)
-#define MAXLINE 65535
+#define MAXLINE 8192
 
 
 int strip_punks(const char srcword[], char destword[])
@@ -69,15 +69,16 @@ EXIT_RET:
 int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
 {
     int ret = 0;
-    char line[MAXLINE+1];
     int errcount;
     int linelen;
     char c;
     int ws,we;
-    char* word;
     int eol = 0;
     int index = 0;
+
+    char* word;
     char tword[MAXWORDCHECK+1];
+    char line[MAXLINE+1];
 
     errcount = 0;
     while(!feof(fp))
@@ -99,6 +100,18 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
             }
         }
         
+        //we have a word, but we're not at the end of a line (and its not eof)
+        if(linelen>0 && !eol && !feof(fp))
+        {
+            c=1;
+            //chew up the rest of the line
+            while(c!=0 && c!=(int)0xFF && c!='\n' && c!='\r' && !feof(fp))
+            {
+                c = fgetc(fp);
+            }
+            continue;//next line!
+        }
+
         //space tokenize
         ws=0;
         while(ws < linelen)
@@ -110,6 +123,7 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
             while(we<linelen && line[we]!='\0') we++;
 
             if(ws>=linelen) break;  //no more words on this line
+            if(we-ws+1 > LENGTH) { ws=we; continue; }   //word too long
             memset(tword, 0, MAXWORDCHECK+1);
             memcpy(tword, line+ws, we-ws+1);
             
@@ -119,7 +133,7 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[])
             //Note, we're stripping the punks BEFORE checking, AND while chekcing,
             //  because the spec defines that check_word() must, but the TEST sample
             //  requires the punks to be stripped from the mspell results
-            if(strip_punks(tword, word)==0) {ret=0; goto EXIT_RET;}
+            if(strip_punks(tword, word)==0) { free(word); word=NULL; ws=we; continue; }    //move next if the word is no good
             
             //check the word
             //NOTE:  standalone punks will be flagged as 'misspellings'
@@ -172,8 +186,9 @@ bool check_word(const char* word, hashmap_t hashtable[])
     char c;
     int hashloc = 0;
     int i;
-    char tword[LENGTH+1];
+
     hashmap_t tnode;
+    char tword[LENGTH+1];
 
     //if we get back 0, the word doens't have anything but punks
     if(strip_punks(word, tword)==0) {ret=0; goto EXIT_RET;}
@@ -220,10 +235,11 @@ bool load_dictionary(const char* dictionary_file, hashmap_t hashtable[])
     int i;
     FILE* fp = NULL;
     char c;
-    char word[LENGTH+1];
     int hashloc;
-    hashmap_t tnode;
     int eol;
+
+    char word[LENGTH+1];
+    hashmap_t tnode;
 
     //clear the map
     memset(hashtable, 0, sizeof(hashmap_t)*HASH_SIZE);
@@ -287,7 +303,7 @@ bool load_dictionary(const char* dictionary_file, hashmap_t hashtable[])
             //chew up the rest of the line
             while(c!=0 && c!='\n' && c!='\r')
             {
-                fread(&c,1,1,fp);
+                c = fgetc(fp);
             }
         }
 
