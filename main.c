@@ -15,9 +15,14 @@ int _test_02();
 int _test_03();
 int _test_04();
 int _test_05();
+int _test_06();
+int _test_07();
+int _test_08();
 int _test_files(char* testfile, char* dictfile);
+void log_start(char* msg);
 void log_msg(char* msg);
 void log_msg_i1(char* msg, int i1);
+void log_res_i1(char* msg, int i1);
 void log_err(char* msg);
 
 int main(int argc, char** argv)
@@ -32,6 +37,9 @@ int main(int argc, char** argv)
         ec = _test_03();
         ec = _test_04();
         ec = _test_05();
+        ec = _test_06();
+        ec = _test_07();
+        ec = _test_08();
     }
     else if(argc==3)
     {
@@ -92,7 +100,7 @@ int _test_01()
 
     memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
     
-    log_msg("---- Test 01 ------------------");
+    log_start("---- Test 01 ------------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(DICTIONARY, hashtable);
     if(!ec)
@@ -112,7 +120,8 @@ int _test_01()
     }
 
     ec = check_words(fd, hashtable, mspell);
-    log_msg_i1("%d invalid words found", ec);
+    if(ec==3)   log_res_i1("PASS - %d==3 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=3 invalid words found", ec);
 
     fclose(fd);
     
@@ -126,7 +135,8 @@ int _test_01()
     }
 
     ec = check_words(fd, hashtable, mspell);
-    log_msg_i1("%d invalid words found", ec);
+    if(ec==3)   log_res_i1("PASS - %d==3 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=3 invalid words found", ec);
 
     fclose(fd);
 
@@ -140,7 +150,7 @@ int _test_02()
     int ec;
     hashmap_t hashtable[HASH_SIZE];
     
-    log_msg("---- Test 02 ----------------");
+    log_start("---- Test 02 ----------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(DICTIONARY, hashtable);
     if(!ec)
@@ -159,6 +169,8 @@ int _test_02()
     if(check_word("te.st", hashtable)) log_err("'te.st' err");
     if(check_word("ith", hashtable)) log_err("'ith' err");
     if(check_word("\1\1\1\1test\1\1\1\1\1", hashtable)) log_err("'\\1' err");
+    if(!check_word("\xA0\xA0\xA0\xA0test\xA0\xA0\xA0\xA0", hashtable)) log_err("'\\xA0' err");
+    if(check_word("w\xA0\xA0\xA0\xA0test\xA0\xA0\xA0\xA0w", hashtable)) log_err("'w\\xA0' err");
     
 
 EXIT_RET:
@@ -177,7 +189,7 @@ int _test_03()
 
     memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
     
-    log_msg("---- Test 03 ------------------");
+    log_start("---- Test 03 ------------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(DICTIONARY, hashtable);
     if(!ec)
@@ -197,7 +209,8 @@ int _test_03()
     }
 
     ec = check_words(fd, hashtable, mspell);
-    log_msg_i1("%d invalid words found", ec);
+    if(ec==0)   log_res_i1("PASS - %d==0 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=0 invalid words found", ec);
 
     fclose(fd);
     
@@ -216,7 +229,7 @@ int _test_04()
 
     memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
     
-    log_msg("---- Test 04 ------------------");
+    log_start("---- Test 04 ------------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(DICTIONARY, hashtable);
     if(!ec)
@@ -236,7 +249,8 @@ int _test_04()
     }
 
     ec = check_words(fd, hashtable, mspell);
-    log_msg_i1("%d invalid words found", ec);
+    if(ec==1)   log_res_i1("PASS - %d==1 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=1 invalid words found", ec);
 
     fclose(fd);
     
@@ -255,7 +269,7 @@ int _test_05()
 
     memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
     
-    log_msg("---- Test 05 ------------------");
+    log_start("---- Test 05 ------------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(DICTIONARY, hashtable);
     if(!ec)
@@ -275,8 +289,126 @@ int _test_05()
     }
 
     ec = check_words(fd, hashtable, mspell);
-    log_msg_i1("%d invalid words found", ec);
+    if(ec==0)   log_res_i1("PASS - %d==0 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=0 invalid words found", ec);
 
+    fclose(fd);
+    
+EXIT_RET:
+    clean(hashtable, mspell);
+    return ret;
+}
+int _test_06()
+{
+    int ret = 0;
+    int ec;
+    hashmap_t hashtable[HASH_SIZE];
+    FILE* fd;
+    char* mspell[MAX_MISSPELLED];
+
+    memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
+    
+    log_start("---- Test 06 ------------------");
+    log_msg("Loading dictionary...");
+    ec = load_dictionary(DICTIONARY, hashtable);
+    if(!ec)
+    {
+        ret = -1;
+        log_err("Failed to load dictionary!");
+        goto EXIT_RET;
+    }
+
+    log_msg("-- Loading test file 'test3'...");
+    fd = fopen("test3.txt", "rb");
+    if(!fd)
+    {
+        ret = -2;
+        log_err("Failed to open test file.");
+        goto EXIT_RET;
+    }
+
+    ec = check_words(fd, hashtable, mspell);
+    if(ec==0)   log_res_i1("PASS - %d==0 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=0 invalid words found", ec);
+
+    fclose(fd);
+    
+EXIT_RET:
+    clean(hashtable, mspell);
+    return ret;
+}
+int _test_07()
+{
+    int ret = 0;
+    int ec;
+    hashmap_t hashtable[HASH_SIZE];
+    FILE* fd;
+    char* mspell[MAX_MISSPELLED];
+
+    memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
+    
+    log_start("---- Test 07 ------------------");
+    log_msg("Loading dictionary...");
+    ec = load_dictionary(DICTIONARY, hashtable);
+    if(!ec)
+    {
+        ret = -1;
+        log_err("Failed to load dictionary!");
+        goto EXIT_RET;
+    }
+
+    log_msg("-- Loading test file 'test6'...");
+    fd = fopen("test6.txt", "rb");
+    if(!fd)
+    {
+        ret = -2;
+        log_err("Failed to open test file.");
+        goto EXIT_RET;
+    }
+
+    ec = check_words(fd, hashtable, mspell);
+    if(ec==5)   log_res_i1("PASS - %d==5 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=5 invalid words found", ec);
+
+    fclose(fd);
+    
+EXIT_RET:
+    clean(hashtable, mspell);
+    return ret;
+}
+int _test_08()
+{
+    int ret = 0;
+    int ec;
+    hashmap_t hashtable[HASH_SIZE];
+    FILE* fd;
+    char* mspell[MAX_MISSPELLED];
+    int i;
+
+    memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
+    
+    log_start("---- Test 08 ------------------");
+    log_msg("Loading dictionary...");
+    ec = load_dictionary(DICTIONARY, hashtable);
+    if(!ec)
+    {
+        ret = -1;
+        log_err("Failed to load dictionary!");
+        goto EXIT_RET;
+    }
+
+    log_msg("-- Loading test file 'test7'...");
+    fd = fopen("test7.txt", "rb");
+    if(!fd)
+    {
+        ret = -2;
+        log_err("Failed to open test file.");
+        goto EXIT_RET;
+    }
+
+    ec = check_words(fd, hashtable, mspell);
+    if(ec==5)   log_res_i1("PASS - %d==5 invalid words found", ec);
+    else        log_res_i1("FAIL - %d!=5 invalid words found", ec);
     fclose(fd);
     
 EXIT_RET:
@@ -294,7 +426,7 @@ int _test_files(char* testfile, char* dictfile)
 
     memset(mspell, 0, sizeof(char*)*MAX_MISSPELLED);
     
-    log_msg("---- Testing cmdline files ------------------");
+    log_start("---- Testing cmdline files ------------------");
     log_msg("Loading dictionary...");
     ec = load_dictionary(dictfile, hashtable);
     if(!ec)
@@ -323,16 +455,29 @@ EXIT_RET:
     return ret;
 }
 
+void log_start(char* msg)
+{
+    fprintf(stdout, msg); fprintf(stdout, "\n");
+}
+
 void log_msg(char* msg)
 {
+    fprintf(stdout, " > ");
     fprintf(stdout, msg); fprintf(stdout, "\n");
 }
 void log_msg_i1(char* msg, int i1)
 {
+    fprintf(stdout, " > ");
+    fprintf(stdout, msg, i1); fprintf(stdout, "\n");
+}
+void log_res_i1(char* msg, int i1)
+{
+    fprintf(stdout, "@> ");
     fprintf(stdout, msg, i1); fprintf(stdout, "\n");
 }
 
 void log_err(char* msg)
 {
+    fprintf(stdout, "!> ");
     fprintf(stdout, msg); fprintf(stdout, "\n");
 }

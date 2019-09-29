@@ -1,4 +1,4 @@
-CC=afl-gcc
+CC=gcc
 default: prog
 
 get-deps:
@@ -22,9 +22,6 @@ test: dictionary.o spell.o test_main.o
 	./test_main
 
 prog: dictionary.o spell.o main.o
-	$(CC) -Wall -g -o spell_check dictionary.o spell.o main.o
-
-afl: dictionary.o spell.o main.o
 	$(CC) -Wall -g -o spell_check dictionary.o spell.o main.o
 
 clean:

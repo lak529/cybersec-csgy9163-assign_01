@@ -34,6 +34,7 @@ int strip_punks(const char srcword[], char destword[])
     {
         c=srcword[ps];
         if(c=='\0') { break; } //break out, we're at the end of the valid string
+        if(c<0||c>127) { ps++; continue; }
         for(i=0; i<PUNCSNUM; i++)
         {
             if(c==PUNCS[i]) { ps++; c=0; break; }
@@ -46,9 +47,10 @@ int strip_punks(const char srcword[], char destword[])
     {
         c=srcword[pe];
         if(c=='\0') { pe--; continue; }
+        if(c<0||c>127) { pe--; continue; }
         for(i=0; i<PUNCSNUM; i++)
         {
-            if(c==PUNCS[i]) { pe--; c=0; break; }
+            if(c==PUNCS[i] || c>127) { pe--; c=0; break; }
         }
         if(c!=0) break; //break out, we have a letter
     }
@@ -194,6 +196,7 @@ bool check_word(const char* word, hashmap_t hashtable[])
     if(strip_punks(word, tword)==0) {ret=0; goto EXIT_RET;}
 
     hashloc = hash_function(tword);
+    if(hashloc<0||hashloc>=HASH_SIZE){ret=0; goto EXIT_RET;} //sanity check on bad hash_function() implementation
     tnode = hashtable[hashloc];
     //keep going to walk the chain (or no initail match)
     while(tnode!=NULL)
@@ -206,6 +209,7 @@ bool check_word(const char* word, hashmap_t hashtable[])
     //since we didn't find it regular, lcase and try again
     for(i=0; i<LENGTH; i++) tword[i] = tolower(tword[i]);
     hashloc = hash_function(tword);
+    if(hashloc<0||hashloc>=HASH_SIZE){ret=0; goto EXIT_RET;} //sanity check on bad hash_function() implementation
     tnode = hashtable[hashloc];
     //keep going to walk the chain (or no initail match)
     while(tnode!=NULL)
@@ -280,6 +284,7 @@ bool load_dictionary(const char* dictionary_file, hashmap_t hashtable[])
 
             //find where to put it
             hashloc = hash_function(tnode->word)%HASH_SIZE;
+            if(hashloc<0||hashloc>=HASH_SIZE){ free(tnode); tnode=NULL; continue;} //sanity check on bad hash_function() implementation
             //note: valgrind complains about these indecies.  we have to assume size, sicne we can't modify
             //  to have a proper size accompany the hashtable[] array
             //[Invalid write of size 8]
