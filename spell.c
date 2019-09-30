@@ -183,9 +183,9 @@ bool check_word(const char* word, hashmap_t hashtable[])
 #endif
 {
     int ret = 0;
-    int ps = 0;
-    int pe = 0;
-    char c;
+//    int ps = 0;
+//    int pe = 0;
+//    char c;
     int hashloc = 0;
     int i;
 
